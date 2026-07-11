@@ -47,7 +47,6 @@ param environmentName string
   }
 })
 param location string
-param vnetEnabled bool
 param apiServiceName string = ''
 param apiUserAssignedIdentityName string = ''
 param applicationInsightsName string = ''
@@ -55,7 +54,9 @@ param appServicePlanName string = ''
 param logAnalyticsName string = ''
 param resourceGroupName string = ''
 param storageAccountName string = ''
+//#if (!skipVnet)
 param vNetName string = ''
+//#endif
 @description('Id of the user identity to be used for testing and debugging. This is not required in production. Leave empty if not needed.')
 param principalId string = deployer().objectId
 
@@ -120,7 +121,9 @@ module api './app/api.bicep' = {
     identityClientId: apiUserAssignedIdentity.outputs.clientId
     appSettings: {
     }
-    virtualNetworkSubnetId: vnetEnabled ? serviceVirtualNetwork.outputs.appSubnetID : ''
+//#if (!skipVnet)
+    virtualNetworkSubnetId: serviceVirtualNetwork.outputs.appSubnetID
+//#endif
   }
 }
 
@@ -133,14 +136,19 @@ module storage 'br/public:avm/res/storage/storage-account:0.8.3' = {
     allowBlobPublicAccess: false
     allowSharedKeyAccess: false // Disable local authentication methods as per policy
     dnsEndpointType: 'Standard'
-    publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
-    networkAcls: vnetEnabled ? {
+////#if (skipVnet)
+//    publicNetworkAccess: 'Enabled'
+//    networkAcls: {
+//      defaultAction: 'Allow'
+//      bypass: 'AzureServices'
+//    }
+//#else
+    publicNetworkAccess: 'Disabled'
+    networkAcls: {
       defaultAction: 'Deny'
       bypass: 'None'
-    } : {
-      defaultAction: 'Allow'
-      bypass: 'AzureServices'
     }
+//#endif
     blobServices: {
       containers: [{name: deploymentStorageContainerName}]
     }
@@ -175,8 +183,9 @@ module rbac 'app/rbac.bicep' = {
   }
 }
 
+//#if (!skipVnet)
 // Virtual Network & private endpoint to blob storage
-module serviceVirtualNetwork 'app/vnet.bicep' =  if (vnetEnabled) {
+module serviceVirtualNetwork 'app/vnet.bicep' = {
   name: 'serviceVirtualNetwork'
   scope: rg
   params: {
@@ -186,20 +195,21 @@ module serviceVirtualNetwork 'app/vnet.bicep' =  if (vnetEnabled) {
   }
 }
 
-module storagePrivateEndpoint 'app/storage-PrivateEndpoint.bicep' = if (vnetEnabled) {
+module storagePrivateEndpoint 'app/storage-PrivateEndpoint.bicep' = {
   name: 'servicePrivateEndpoint'
   scope: rg
   params: {
     location: location
     tags: tags
     virtualNetworkName: !empty(vNetName) ? vNetName : '${abbrs.networkVirtualNetworks}${resourceToken}'
-    subnetName: vnetEnabled ? serviceVirtualNetwork.outputs.peSubnetName : '' // Keep conditional check for safety, though module won't run if !vnetEnabled
+    subnetName: serviceVirtualNetwork.outputs.peSubnetName
     resourceName: storage.outputs.name
     enableBlob: storageEndpointConfig.enableBlob
     enableQueue: storageEndpointConfig.enableQueue
     enableTable: storageEndpointConfig.enableTable
   }
 }
+//#endif
 
 // Monitor application with Azure Monitor - Log Analytics and Application Insights
 module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.11.1' = {

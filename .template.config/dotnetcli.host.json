@@ -4,6 +4,10 @@
       "skipRestore": {
         "longName": "no-restore",
         "shortName": ""
+      },
+      "skipVnet": {
+        "longName": "no-vnet",
+        "shortName": ""
       }
     },
     "usageExamples": [ ]

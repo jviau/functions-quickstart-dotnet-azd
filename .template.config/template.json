@@ -11,6 +11,14 @@
         {
           "description": "Exclude .git folder",
           "exclude": [ ".git/**" ]
+        },
+        {
+          "description": "Exclude virtual network infrastructure when skipVnet is specified",
+          "condition": "(skipVnet)",
+          "exclude": [
+            "infra/app/vnet.bicep",
+            "infra/app/storage-PrivateEndpoint.bicep"
+          ]
         }
       ]
     }
@@ -21,8 +29,36 @@
       "datatype": "bool",
       "defaultValue": false,
       "description": "If specified, skips the automatic restore of the project on create."
+    },
+    "skipVnet": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": false,
+      "description": "If specified, skips creating a virtual network and private endpoint (the deployment will not be secured behind a VNet)."
     }
   },
+  "primaryOutputs": [
+    {
+      "path": "http.sln"
+    },
+    {
+      "path": "http/http.csproj"
+    }
+  ],
+  "postActions": [
+    {
+      "id": "restore",
+      "condition": "(!skipRestore)",
+      "description": "Restore NuGet packages required by this project.",
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore'"
+        }
+      ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ],
   "specialCustomOperations": {
     "**/*.bicep": {
       "flagPrefix": "//",
@@ -39,19 +75,5 @@
         }
       ]
     }
-  },
-  "postActions": [
-    {
-      "id": "restore",
-      "condition": "(!skipRestore)",
-      "description": "Restore NuGet packages required by this project.",
-      "manualInstructions": [
-        {
-          "text": "Run 'dotnet restore'"
-        }
-      ],
-      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
-      "continueOnError": true
-    }
-  ]
+  }
 }
