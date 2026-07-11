@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Azure Functions",
+  "classifications": [ "Functions", "Azure", "CSharp" ],
+  "identity": "Azure.Functions.Templates.CSharpAzdQuickstart",
+  "name": "Functions Quickstart (C# + AZD)",
+  "shortName": "functions-quickstart-dotnet-azd",
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "description": "Exclude .git folder",
+          "exclude": [ ".git/**" ]
+        }
+      ]
+    }
+  ]
+}
